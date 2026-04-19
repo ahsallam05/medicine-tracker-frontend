@@ -34,11 +34,35 @@ npm install
 
 ### Environment Variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory to configure the API endpoint.
+
+#### Option 1: Use Production API (Recommended for quick start)
+
+No backend setup required. Use the deployed production API:
 
 ```env
 VITE_API_URL=https://medicine-tracker-backend.up.railway.app/api
 ```
+
+#### Option 2: Use Local Backend
+
+To run with a local backend, you need to set up the backend first:
+
+1. **Clone and setup the backend**:
+   ```bash
+   git clone https://github.com/ahsallam05/medicine-tracker-backend.git
+   cd medicine-tracker-backend
+   # Follow the backend README for setup instructions
+   ```
+
+2. **Start the backend server** (on `http://localhost:3000`)
+
+3. **Configure the frontend to use localhost**:
+   ```env
+   VITE_API_URL=http://localhost:3000/api
+   ```
+
+> **Note:** Ensure your backend server is running and configured to accept requests from the frontend origin. You may need to enable CORS on your backend.
 
 ### Development
 
