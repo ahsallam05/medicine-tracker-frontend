@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  --color-primary: #0d9488;
+  --color-secondary: #16a34a;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  cursor: pointer;
+}
+
+/* Hide scrollbar but keep scroll functionality in main content area */
+.content-area::-webkit-scrollbar {
+  display: none;
+}
+.content-area {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

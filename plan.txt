@@ -1,0 +1,333 @@
+You are helping me build a React + Vite + Tailwind CSS v4 frontend
+for a Medicine Expiry Date Tracking System.
+
+The project is already set up and partially built.
+READ the existing files before doing anything.
+Build ONE feature at a time and wait for my confirmation before continuing.
+NEVER touch working files when building a new feature.
+
+-------------------------------------
+
+TECH STACK:
+
+- React + Vite
+- Tailwind CSS v4 (@import "tailwindcss" syntax, no tailwind.config.js)
+- React Router v7
+- Axios
+- lucide-react (for all icons)
+
+Backend API: https://medicine-tracker-backend.up.railway.app/api
+(stored in .env as VITE_API_URL)
+
+-------------------------------------
+
+COLOR PALETTE:
+
+- Primary: teal-600 (#0d9488)
+- Secondary: green-600 (#16a34a)
+- Background: white / gray-50
+- Danger: red-600
+- Warning: amber-500
+- Text: slate-800
+
+Status colors:
+- Total Medicines → teal-600
+- Expired → red-600
+- Critical → orange-500
+- Expiring Soon → yellow-500
+- Out of Stock → gray-500
+- Running Low → amber-500
+- Good → green-600
+
+-------------------------------------
+
+ICONS (lucide-react only, no emojis):
+
+Navigation:
+- Dashboard → LayoutDashboard
+- Medicines → Pill
+- Alerts → Bell
+- Pharmacists → Users
+
+Stat cards / Alert sections:
+- Total Medicines → Pill
+- Expired → Skull
+- Critical → AlertCircle
+- Expiring Soon → Clock
+- Out of Stock → PackageX
+- Running Low → AlertTriangle
+
+UI actions:
+- Logout → LogOut
+- Show/hide password → Eye / EyeOff
+- Hamburger menu → Menu
+- Close sidebar → X
+- Edit → Pencil
+- Delete → Trash2
+- Add → Plus
+- Expand/collapse → ChevronDown / ChevronUp
+
+-------------------------------------
+
+STRICT CODING RULES:
+
+- API calls: only through service files — never call axios directly
+- Badge logic: only through BadgeFactory — never inline
+- Auth state: React Context (AuthContext)
+- Routing: React Router v6
+- Storage: localStorage for token and user
+- Async: always async/await with try/catch
+- Loading: disable button or show spinner while fetching
+- Errors: show message from API response
+- Tables: always wrap in overflow-x-auto
+
+-------------------------------------
+
+DESIGN PATTERNS:
+
+1. SINGLETON — src/api/axios.js
+   Static getInstance() returns one shared Axios instance.
+   Base URL from import.meta.env.VITE_API_URL
+
+2. FACTORY METHOD — src/utils/BadgeFactory.js
+   Static create(medicine) returns { label, color, icon }
+   Priority: Expired → Critical → Expiring Soon → 
+             Out of Stock → Running Low → Good
+
+3. FACADE — src/api/services/*.js
+   Each service is a class with methods wrapping Axios calls.
+   Components never import axios directly.
+
+4. CHAIN OF RESPONSIBILITY — src/api/axios.js interceptors
+   Request: AttachTokenHandler → LogRequestHandler
+   Response: SuccessHandler → UnauthorizedHandler → 
+             ForbiddenHandler → ErrorHandler
+
+-------------------------------------
+
+FOLDER STRUCTURE:
+
+src/
+├── api/
+│   ├── axios.js
+│   └── services/
+│       ├── authService.js
+│       ├── medicineService.js
+│       ├── alertService.js
+│       ├── dashboardService.js
+│       └── adminService.js
+├── components/
+│   ├── layout/
+│   │   ├── Layout.jsx
+│   │   ├── Sidebar.jsx
+│   │   └── Navbar.jsx
+│   ├── ui/
+│   │   ├── StatCard.jsx
+│   │   ├── Badge.jsx
+│   │   ├── AlertSection.jsx
+│   │   ├── ConfirmDialog.jsx
+│   │   └── MedicineModal.jsx
+│   └── ProtectedRoute.jsx
+├── context/
+│   └── AuthContext.jsx
+├── hooks/
+│   └── useAuth.js
+├── pages/
+│   ├── Login.jsx
+│   ├── Dashboard.jsx
+│   ├── medicines/
+│   │   └── MedicineList.jsx
+│   ├── alerts/
+│   │   └── Alerts.jsx
+│   └── admin/
+│       └── PharmacistList.jsx
+├── utils/
+│   └── BadgeFactory.js
+├── App.jsx
+├── main.jsx
+└── index.css
+
+-------------------------------------
+
+ROUTES:
+
+| Page             | Route                  | Role              |
+|------------------|------------------------|-------------------|
+| Login            | /login                 | Public            |
+| Dashboard        | /dashboard             | Admin, Pharmacist |
+| Medicines List   | /medicines             | Admin, Pharmacist |
+| Alerts           | /alerts?section=       | Admin, Pharmacist |
+| Pharmacists List | /admin/pharmacists     | Admin only        |
+
+Note: Add/Edit Medicine → modal on /medicines (no separate route)
+Note: Add/Edit Pharmacist → modal on /admin/pharmacists (no separate route)
+
+-------------------------------------
+
+BACKEND API REFERENCE:
+
+AUTH:
+POST /auth/login
+Body: { username, password }
+Returns: { token, user: { id, name, username, role } }
+
+MEDICINES:
+GET    /medicines?search=&category=&page=&limit=&sortBy=&order=
+POST   /medicines → { name, quantity, expiry_date, category }
+GET    /medicines/:id
+PUT    /medicines/:id → { name, quantity, expiry_date, category }
+DELETE /medicines/:id
+
+sortBy options: id, name, quantity, expiry_date, category, created_at
+order options: asc, desc
+Defaults: sortBy=id, order=asc
+
+Response structure for GET /medicines:
+{
+  "status": "success",
+  "medicines": [...],
+  "pagination": {
+    "total": 30,
+    "page": 1,
+    "limit": 10,
+    "pages": 3
+  }
+}
+
+ALERTS:
+GET /alerts
+Returns:
+{
+  "status": "success",
+  "data": {
+    "expired": [...],
+    "critical": [...],
+    "expiringSoon": [...],
+    "outOfStock": [...],
+    "runningLow": [...]
+  }
+}
+
+DASHBOARD:
+GET /dashboard/stats
+Returns:
+{
+  "status": "success",
+  "data": {
+    "totalMedicines": 30,
+    "expiredCount": 5,
+    "criticalCount": 5,
+    "expiringSoonCount": 5,
+    "outOfStockCount": 10,
+    "runningLowCount": 10
+  }
+}
+
+ADMIN:
+GET    /admin/pharmacists
+POST   /admin/pharmacists → { name, username, password }
+PUT    /admin/pharmacists/:id → { name, username, password (optional) }
+PATCH  /admin/pharmacists/:id/status → { is_active }
+DELETE /admin/pharmacists/:id
+
+-------------------------------------
+
+CURRENT FEATURE STATUS:
+
+✅ Feature 0: Starter code (axios, services, context, layout, routes)
+✅ Feature 1: Login page
+✅ Feature 2: Layout + Navigation (Sidebar + Navbar)
+✅ Feature 3: Dashboard (stat cards + recent medicines table)
+✅ Feature 4: Medicines List (table + search + filter + pagination)
+✅ Feature 5: Add & Edit Medicine (MedicineModal.jsx)
+⬜ Feature 6: Alerts page
+⬜ Feature 7: Pharmacists page
+⬜ Feature 8: Polish
+
+-------------------------------------
+
+FEATURE SPECS:
+
+FEATURE 6 — ALERTS PAGE (src/pages/alerts/Alerts.jsx):
+
+- Fetch GET /alerts on load using alertService.getAll()
+- Read data from response.data (the object with 5 arrays)
+- Display 5 collapsible sections using AlertSection component:
+
+  Section key   | Title                        | Data key
+  --------------|------------------------------|-------------
+  expired       | Expired Medicines            | data.expired
+  critical      | Critical — Expiring in 7 Days| data.critical
+  expiringSoon  | Expiring Soon — Within 30 Days| data.expiringSoon
+  outOfStock    | Out of Stock                 | data.outOfStock
+  runningLow    | Running Low — Stock ≤ 10     | data.runningLow
+
+- AlertSection props: title, icon, colorClass, medicines[], defaultOpen
+- Section header: icon + title + count badge + ChevronDown/Up
+- Click header → toggle open/closed
+- When open: table — Name, Category, Quantity, Expiry Date
+- When closed: header only
+- Empty state inside section: "No medicines in this category ✅"
+
+URL param behavior (use useSearchParams):
+- ?section=expired → auto-open expired only
+- ?section=critical → auto-open critical only
+- ?section=expiringSoon → auto-open expiringSoon only
+- ?section=outOfStock → auto-open outOfStock only
+- ?section=runningLow → auto-open runningLow only
+- No param → all sections collapsed
+
+FEATURE 7 — PHARMACISTS PAGE (src/pages/admin/PharmacistList.jsx):
+
+- Fetch GET /admin/pharmacists on load using adminService.getAll()
+- Table columns: Name, Username, Status, Actions
+- Status badge: Active → green, Inactive → red
+- Actions per row:
+  - Edit button (Pencil icon, teal) → opens EditPharmacistModal
+  - Deactivate/Activate button → PATCH via adminService.updateStatus()
+    Shows "Deactivate" if active, "Activate" if inactive
+  - Delete button (Trash2 icon, red) → ConfirmDialog → 
+    adminService.remove(id) → refetch
+
+Add Pharmacist modal (triggered by "Add Pharmacist" button, top right):
+- Form: Name, Username, Password (with Eye/EyeOff toggle)
+- Submit: adminService.create(data)
+- Success: close modal + refetch list
+- Error: show message inside modal
+
+Edit Pharmacist modal (triggered by Edit button in table row):
+- Pre-fill: Name, Username (Password left empty — only update if filled)
+- Submit: adminService.update(id, data) — omit password if empty
+- Success: close modal + refetch list
+- Error: show message inside modal
+
+Both modals:
+- Can be one reusable PharmacistModal.jsx component
+- Props: isOpen, onClose, pharmacist (null=add, object=edit)
+- Cancel/X closes modal
+- Escape key closes modal
+- Loading state on submit button
+
+Create file: src/components/ui/PharmacistModal.jsx
+
+FEATURE 8 — POLISH:
+- All pages: loading spinner while fetching
+- All pages: friendly error message if API fails
+- All tables: empty state with icon and message
+- All forms: submit button disabled while loading
+- Sidebar active link highlights correctly on all routes
+- Mobile: hamburger + sidebar overlay tested
+- All tables wrapped in overflow-x-auto
+
+-------------------------------------
+
+HOW WE WORK:
+
+- I will tell you which feature to build
+- Build only that feature
+- Run npm run build to verify no errors
+- Tell me "Build passed ✅" and wait for my go-ahead
+- Never auto-start the next feature
+- If build fails: fix the error, do not touch other files
+
+READY — wait for my instruction to start.
