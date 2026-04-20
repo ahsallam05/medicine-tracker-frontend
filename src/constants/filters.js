@@ -20,9 +20,7 @@ export const CATEGORIES = [
   'Supplements',
   'Dermatology',
   'Ophthalmology',
-  'Analgesics',
-  'Antiseptics',
-  'Vaccines',
-  'Vitamins',
-  'Others',
+  'Endocrinology',
+  'Antivirals',
+  'Urology',
 ];
