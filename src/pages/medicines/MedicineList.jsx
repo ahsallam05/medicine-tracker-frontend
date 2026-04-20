@@ -156,11 +156,19 @@ export default function MedicineList() {
           className="w-full cursor-pointer rounded-lg border border-gray-300 px-3 py-2 text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
         >
           <option value="All">All</option>
-          <option value="Painkiller">Painkiller</option>
-          <option value="Antibiotic">Antibiotic</option>
-          <option value="Antiviral">Antiviral</option>
-          <option value="Vitamin">Vitamin</option>
-          <option value="Antacid">Antacid</option>
+          <option value="Antipyretics">Antipyretics</option>
+          <option value="Antibiotics">Antibiotics</option>
+          <option value="Antidiabetics">Antidiabetics</option>
+          <option value="Cardiovascular">Cardiovascular</option>
+          <option value="Respiratory">Respiratory</option>
+          <option value="Gastrointestinal">Gastrointestinal</option>
+          <option value="Neurological">Neurological</option>
+          <option value="Supplements">Supplements</option>
+          <option value="Dermatology">Dermatology</option>
+          <option value="Ophthalmology">Ophthalmology</option>
+          <option value="Endocrinology">Endocrinology</option>
+          <option value="Antivirals">Antivirals</option>
+          <option value="Urology">Urology</option>
         </select>
       </div>
 

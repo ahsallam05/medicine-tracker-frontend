@@ -3,11 +3,19 @@ import { Loader2 } from 'lucide-react';
 import medicineService from '../../api/services/medicineService';
 
 const CATEGORIES = [
-  'Painkiller',
-  'Antibiotic',
-  'Antiviral',
-  'Vitamin',
-  'Antacid',
+  'Antipyretics',
+  'Antibiotics',
+  'Antidiabetics',
+  'Cardiovascular',
+  'Respiratory',
+  'Gastrointestinal',
+  'Neurological',
+  'Supplements',
+  'Dermatology',
+  'Ophthalmology',
+  'Endocrinology',
+  'Antivirals',
+  'Urology',
 ];
 
 function toInputDate(value) {
