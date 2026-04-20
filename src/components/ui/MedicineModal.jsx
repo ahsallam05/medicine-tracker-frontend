@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Loader2, X } from 'lucide-react';
 import medicineService from '../../api/services/medicineService';
 
 const CATEGORIES = [
@@ -40,6 +40,65 @@ function getInitialForm(medicine) {
     quantity: 0,
     expiryDate: '',
   };
+}
+
+function CategorySelect({ value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (category) => {
+    onChange(category);
+    setIsOpen(false);
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2 text-left text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+      >
+        <span>{value}</span>
+        <svg
+          className={`h-4 w-4 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="category-dropdown absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+          <div className="max-h-[200px] overflow-y-auto">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => handleSelect(cat)}
+                className={`w-full cursor-pointer px-3 py-2 text-left text-sm hover:bg-gray-100 ${
+                  value === cat ? 'bg-teal-50 text-teal-700 font-medium' : 'text-slate-700'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function MedicineModal({ isOpen, onClose, medicine, onSaved }) {
@@ -108,7 +167,18 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSaved }) {
       />
 
       <div className="relative w-full max-w-lg rounded-xl bg-white p-5 shadow-lg ring-1 ring-gray-200">
-        <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
+          <button
+            type="button"
+            onClick={() => (isSubmitting ? null : onClose())}
+            disabled={isSubmitting}
+            className="cursor-pointer rounded-md p-2 text-slate-400 hover:bg-gray-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Close modal"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
         <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
           <div>
@@ -128,18 +198,7 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSaved }) {
             <label className="mb-1 block text-sm font-medium text-slate-700">
               Category
             </label>
-            <select
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              required
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-            >
-              {CATEGORIES.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
+            <CategorySelect value={category} onChange={setCategory} />
           </div>
 
           <div>

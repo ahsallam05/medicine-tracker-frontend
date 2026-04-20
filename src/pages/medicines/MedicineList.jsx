@@ -6,8 +6,114 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import MedicineModal from '../../components/ui/MedicineModal';
 import Spinner from '../../components/ui/Spinner';
 import BadgeFactory from '../../utils/BadgeFactory';
+import { CategoryDropdown } from '../../components/ui/FilterPanel';
+import { useFilters } from '../../hooks/useFilters';
 
-const LIMIT = 20;
+const LIMIT = 50;
+
+function Pagination({ page, totalPages, total, canPrev, canNext, isLoading, onPageChange }) {
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(1);
+
+      // Calculate start and end of visible range
+      let start = Math.max(2, page - 1);
+      let end = Math.min(totalPages - 1, page + 1);
+
+      // Adjust if at the beginning
+      if (page <= 2) {
+        end = Math.min(totalPages - 1, 4);
+      }
+
+      // Adjust if at the end
+      if (page >= totalPages - 1) {
+        start = Math.max(2, totalPages - 3);
+      }
+
+      // Add ellipsis after first page if needed
+      if (start > 2) {
+        pages.push('...');
+      }
+
+      // Add visible pages
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+
+      // Add ellipsis before last page if needed
+      if (end < totalPages - 1) {
+        pages.push('...');
+      }
+
+      // Always show last page
+      if (totalPages > 1) {
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
+  const pageNumbers = getPageNumbers();
+
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-center gap-2 border-t border-gray-200 pt-3">
+      <button
+        type="button"
+        onClick={() => onPageChange(page - 1)}
+        disabled={!canPrev || isLoading}
+        className="cursor-pointer rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        Previous
+      </button>
+
+      <div className="flex items-center gap-1">
+        {pageNumbers.map((pageNum, index) => (
+          pageNum === '...' ? (
+            <span key={`ellipsis-${index}`} className="px-2 text-sm text-slate-500">
+              ...
+            </span>
+          ) : (
+            <button
+              key={pageNum}
+              type="button"
+              onClick={() => onPageChange(pageNum)}
+              disabled={isLoading}
+              className={`cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium ${
+                pageNum === page
+                  ? 'bg-white text-slate-900 ring-1 ring-black'
+                  : 'text-slate-700 hover:bg-gray-50'
+              } disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              {pageNum}
+            </button>
+          )
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onPageChange(page + 1)}
+        disabled={!canNext || isLoading}
+        className="cursor-pointer rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        Next
+      </button>
+
+      <div className="ml-4 text-sm text-slate-500">
+        Total: {total}
+      </div>
+    </div>
+  );
+}
 
 function formatDate(dateRaw) {
   if (!dateRaw) return '—';
@@ -35,45 +141,47 @@ function normalizeListResponse(payload) {
 
 export default function MedicineList() {
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [category, setCategory] = useState('All');
   const [page, setPage] = useState(1);
+
+  // Use the filters hook
+  const filterState = useFilters();
+  const {
+    category,
+    setCategory,
+    getApiParams,
+  } = filterState;
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [medicines, setMedicines] = useState([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [modalMedicine, setModalMedicine] = useState(undefined);
 
-  const fetchMedicines = useCallback(async () => {
+  const fetchMedicines = useCallback(async (currentPage, searchTerm) => {
     const params = {
-      page,
+      page: currentPage,
       limit: LIMIT,
       sortBy: 'created_at',
       order: 'desc',
     };
-    if (debouncedSearch) params.search = debouncedSearch;
-    if (category !== 'All') params.category = category;
+    const filterParams = getApiParams();
+    Object.assign(params, filterParams);
+    if (searchTerm?.trim()) params.search = searchTerm.trim();
 
     const res = await medicineService.getAll(params);
     const normalized = normalizeListResponse(res);
     setMedicines(normalized.medicines);
-    setPage(normalized.page);
-    setTotalPages(normalized.totalPages);
-    setTotal(normalized.total);
-  }, [page, debouncedSearch, category]);
+    setPagination({
+      page: normalized.page,
+      totalPages: normalized.totalPages,
+      total: normalized.total,
+    });
+  }, [getApiParams]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search.trim());
-      setPage(1);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [search]);
+
 
   useEffect(() => {
     let isMounted = true;
@@ -83,7 +191,7 @@ export default function MedicineList() {
       setError('');
 
       try {
-        await fetchMedicines();
+        await fetchMedicines(page, search);
         if (!isMounted) return;
       } catch (err) {
         if (!isMounted) return;
@@ -99,10 +207,7 @@ export default function MedicineList() {
     return () => {
       isMounted = false;
     };
-  }, [fetchMedicines]);
-
-  const canPrev = page > 1;
-  const canNext = page < totalPages;
+  }, [fetchMedicines, page, search]);
 
   const confirmMessage = useMemo(() => {
     if (!deleteTarget) return '';
@@ -125,6 +230,9 @@ export default function MedicineList() {
     }
   };
 
+  const canPrev = page > 1;
+  const canNext = page < pagination.totalPages;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -139,37 +247,17 @@ export default function MedicineList() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px]">
+      <div className="flex w-full flex-col gap-3 sm:flex-row">
         <input
           type="text"
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search medicines..."
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+          onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+          placeholder="Search by medicine name..."
+          className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 sm:flex-1"
         />
-        <select
-          value={category}
-          onChange={(event) => {
-            setCategory(event.target.value);
-            setPage(1);
-          }}
-          className="w-full cursor-pointer rounded-lg border border-gray-300 px-3 py-2 text-slate-800 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-        >
-          <option value="All">All</option>
-          <option value="Antipyretics">Antipyretics</option>
-          <option value="Antibiotics">Antibiotics</option>
-          <option value="Antidiabetics">Antidiabetics</option>
-          <option value="Cardiovascular">Cardiovascular</option>
-          <option value="Respiratory">Respiratory</option>
-          <option value="Gastrointestinal">Gastrointestinal</option>
-          <option value="Neurological">Neurological</option>
-          <option value="Supplements">Supplements</option>
-          <option value="Dermatology">Dermatology</option>
-          <option value="Ophthalmology">Ophthalmology</option>
-          <option value="Endocrinology">Endocrinology</option>
-          <option value="Antivirals">Antivirals</option>
-          <option value="Urology">Urology</option>
-        </select>
+        <div className="h-10 w-full sm:w-48">
+          <CategoryDropdown value={category} onChange={(value) => { setCategory(value); setPage(1); }} />
+        </div>
       </div>
 
       {error ? (
@@ -215,7 +303,7 @@ export default function MedicineList() {
                 medicines.map((medicine) => {
                   const badge = BadgeFactory.create(medicine);
                   return (
-                    <tr key={medicine.id ?? `${medicine.name}-${medicine.expiry_date}`}>
+                    <tr key={medicine.id}>
                       <td className="px-3 py-2 text-sm font-medium text-slate-800">
                         {medicine.name}
                       </td>
@@ -259,30 +347,15 @@ export default function MedicineList() {
           </table>
         </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-3">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={!canPrev || isLoading}
-            className="cursor-pointer rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Previous
-          </button>
-          <div className="text-center">
-            <div className="text-sm text-slate-700">
-              Page {page} of {totalPages}
-            </div>
-            <div className="mt-1 text-xs text-slate-500">Total results: {total}</div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setPage((p) => (canNext ? p + 1 : p))}
-            disabled={!canNext || isLoading}
-            className="cursor-pointer rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Next
-          </button>
-        </div>
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          canPrev={canPrev}
+          canNext={canNext}
+          isLoading={isLoading}
+          onPageChange={setPage}
+        />
       </div>
 
       <ConfirmDialog
@@ -306,6 +379,7 @@ export default function MedicineList() {
           }}
         />
       ) : null}
+
     </div>
   );
 }

@@ -21,3 +21,21 @@ a {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Hide scrollbar but keep scroll functionality in alert boxes */
+.alert-content::-webkit-scrollbar {
+  display: none;
+}
+.alert-content {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Category dropdown - show 5 items with hidden scrollbar */
+.category-dropdown .overflow-y-auto {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.category-dropdown .overflow-y-auto::-webkit-scrollbar {
+  display: none;
+}

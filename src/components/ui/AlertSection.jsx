@@ -26,8 +26,10 @@ export default function AlertSection({
   // Reset visible count when section is collapsed
   useEffect(() => {
     if (!isOpen) {
-      setVisibleCount(DEFAULT_VISIBLE_COUNT);
+      const timer = setTimeout(() => setVisibleCount(DEFAULT_VISIBLE_COUNT), 0);
+      return () => clearTimeout(timer);
     }
+    return undefined;
   }, [isOpen]);
 
   const handleToggle = () => {
@@ -73,7 +75,7 @@ export default function AlertSection({
       </button>
 
       <div style={contentStyle}>
-        <div className="border-t border-current/10 px-4 pb-4 pt-2">
+        <div className="alert-content max-h-[400px] overflow-y-auto border-t border-current/10 px-4 pb-4 pt-2">
           {count === 0 ? (
             <div className="flex flex-col items-center gap-2 py-6">
               <CheckCircle className="h-6 w-6 opacity-60" />
