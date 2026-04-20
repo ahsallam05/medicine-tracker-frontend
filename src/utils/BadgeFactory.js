@@ -1,49 +1,25 @@
-/**
- * Factory Method — status badge metadata.
- * Priority: Out of Stock → Expired → Critical → Expiring Soon → Running Low → Good
- */
-export default class BadgeFactory {
+import { Skull, AlertCircle, Clock, PackageX, AlertTriangle, CheckCircle } from 'lucide-react';
+
+export class BadgeFactory {
   static create(medicine) {
-    const qty = Number(medicine?.quantity ?? 0);
+    if (!medicine) return this._getGoodBadge();
 
-    // 1. Out of Stock (highest priority)
-    if (qty === 0) {
-      return { label: 'Out of Stock', color: 'gray', icon: '📦' };
-    }
+    const isExpired = medicine.is_expired || (medicine.expiry_date && new Date(medicine.expiry_date) < new Date());
+    if (isExpired) return { label: 'Expired', color: 'red', icon: Skull };
 
-    // Date comparisons for expiry
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    if (medicine.is_critical) return { label: 'Critical', color: 'orange', icon: AlertCircle };
+    if (medicine.is_expiring_soon) return { label: 'Expiring Soon', color: 'yellow', icon: Clock };
+    
+    // Unifying Out of Stock and Expired as RED (Critical Inventory)
+    if (medicine.quantity === 0) return { label: 'Out of Stock', color: 'red', icon: PackageX };
+    
+    // Unifying Running Low as AMBER
+    if (medicine.quantity <= 10) return { label: 'Running Low', color: 'amber', icon: AlertTriangle };
 
-    if (medicine?.expiry_date) {
-      const expiry = new Date(medicine.expiry_date);
-      expiry.setHours(0, 0, 0, 0);
+    return this._getGoodBadge();
+  }
 
-      const diffTime = expiry.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      // 2. Expired
-      if (diffDays < 0) {
-        return { label: 'Expired', color: 'red', icon: '💀' };
-      }
-
-      // 3. Critical (within 7 days)
-      if (diffDays <= 7) {
-        return { label: 'Critical', color: 'orange', icon: '🔴' };
-      }
-
-      // 4. Expiring Soon (within 30 days)
-      if (diffDays <= 30) {
-        return { label: 'Expiring Soon', color: 'yellow', icon: '🟡' };
-      }
-    }
-
-    // 5. Running Low (checked after expiry statuses)
-    if (qty > 0 && qty <= 10) {
-      return { label: 'Running Low', color: 'amber', icon: '⚠️' };
-    }
-
-    // 6. Good
-    return { label: 'Good', color: 'green', icon: '✅' };
+  static _getGoodBadge() {
+    return { label: 'Good', color: 'green', icon: CheckCircle };
   }
 }

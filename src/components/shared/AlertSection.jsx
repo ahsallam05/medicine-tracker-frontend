@@ -1,12 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
-
-function formatDate(dateRaw) {
-  if (!dateRaw) return '—';
-  const d = new Date(dateRaw);
-  if (Number.isNaN(d.getTime())) return String(dateRaw);
-  return d.toLocaleDateString();
-}
+import { formatDate } from '../../utils';
 
 const DEFAULT_VISIBLE_COUNT = 10;
 

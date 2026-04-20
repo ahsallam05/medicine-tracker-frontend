@@ -1,345 +1,97 @@
-import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  AlertCircle,
-  AlertTriangle,
-  Clock,
-  Inbox,
-  PackageX,
-  Pill,
-  Skull,
-} from 'lucide-react';
-import dashboardService from '../api/services/dashboardService';
-import medicineService from '../api/services/medicineService';
-import Badge from '../components/ui/Badge';
-import Spinner from '../components/ui/Spinner';
-import BadgeFactory from '../utils/BadgeFactory';
-
-function normalizeStats(payload) {
-  const source =
-    payload?.data?.stats ??
-    payload?.data?.data ??
-    payload?.counts ??
-    payload?.stats ??
-    payload?.data ??
-    payload ??
-    {};
-
-  const readValue = (...keys) => {
-    for (const key of keys) {
-      if (source?.[key] !== undefined && source?.[key] !== null) {
-        return source[key];
-      }
-    }
-    return 0;
-  };
-
-  const toCount = (value) => {
-    if (Array.isArray(value)) return value.length;
-    const n = Number(value);
-    return Number.isFinite(n) ? n : 0;
-  };
-
-  return {
-    totalMedicines: toCount(
-      readValue(
-        'totalMedicines',
-        'total_medicines',
-        'total',
-        'medicinesCount',
-        'medicines_count',
-      ),
-    ),
-    expiredCount: toCount(readValue('expiredCount', 'expired_count', 'expired')),
-    criticalCount: toCount(
-      readValue('criticalCount', 'critical_count', 'critical'),
-    ),
-    expiringSoonCount: toCount(
-      readValue(
-        'expiringSoonCount',
-        'expiring_soon_count',
-        'expiringSoon',
-        'expiring_soon',
-      ),
-    ),
-    outOfStockCount: toCount(
-      readValue(
-        'outOfStockCount',
-        'out_of_stock_count',
-        'outOfStock',
-        'out_of_stock',
-      ),
-    ),
-    runningLowCount: toCount(
-      readValue(
-        'runningLowCount',
-        'running_low_count',
-        'runningLow',
-        'running_low',
-      ),
-    ),
-  };
-}
-
-function formatDate(dateRaw) {
-  if (!dateRaw) return '—';
-  const d = new Date(dateRaw);
-  if (Number.isNaN(d.getTime())) return String(dateRaw);
-  return d.toLocaleDateString();
-}
-
-function StatCardsSkeleton() {
-  return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, idx) => (
-        <div
-          key={`stat-skeleton-${idx}`}
-          className="h-[86px] animate-pulse rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200"
-        >
-          <div className="h-4 w-28 rounded bg-gray-200" />
-          <div className="mt-3 h-7 w-16 rounded bg-gray-200" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function StatCard({ title, value, icon: Icon, accentClass, onClick }) {
-  const clickable = typeof onClick === 'function';
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!clickable}
-      className={`w-full rounded-xl bg-white p-4 text-left shadow-sm ring-1 ring-gray-200 transition ${
-        clickable ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'
-      }`}
-    >
-      <div className="flex items-center justify-between">
-        <div className="min-w-0">
-          <div className="text-xs font-medium text-slate-600 sm:text-sm">{title}</div>
-          <div className="mt-1 text-xl font-bold text-slate-800 sm:text-2xl">{value}</div>
-        </div>
-        <div
-          className={`ml-4 inline-flex h-8 w-8 items-center justify-center rounded-lg ring-1 sm:h-10 sm:w-10 ${accentClass}`}
-        >
-          {Icon ? <Icon className="h-4 w-4 sm:h-5 sm:w-5" /> : null}
-        </div>
-      </div>
-    </button>
-  );
-}
+import { Pill, Skull, AlertCircle, Clock, PackageX, AlertTriangle } from 'lucide-react';
+import { dashboardService, medicineService } from '../api';
+import { Badge, Spinner, StatCard, StatCardsSkeleton } from '../components/shared';
+import { useApi } from '../hooks';
+import { BadgeFactory, formatDate } from '../utils';
 
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
-  const [statsError, setStatsError] = useState('');
-  const [stats, setStats] = useState(() => normalizeStats(null));
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useApi(dashboardService.getStats, {
+    immediate: true,
+    initialData: {
+      totalMedicines: 0, expiredCount: 0, criticalCount: 0,
+      expiringSoonCount: 0, outOfStockCount: 0, runningLowCount: 0,
+    },
+  });
 
-  const [isLoadingRecent, setIsLoadingRecent] = useState(true);
-  const [recentError, setRecentError] = useState('');
-  const [recentMedicines, setRecentMedicines] = useState([]);
+  const {
+    data: recentMedicines,
+    isLoading: recentLoading,
+  } = useApi(medicineService.getAll, {
+    immediate: true,
+    initialData: { medicines: [] },
+  });
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadStats() {
-      setIsLoadingStats(true);
-      setStatsError('');
-      try {
-        const res = await dashboardService.getStats();
-        if (!isMounted) return;
-        setStats(normalizeStats(res));
-      } catch (err) {
-        if (!isMounted) return;
-        setStatsError(
-          err?.response?.data?.message ||
-            'Failed to load dashboard statistics.',
-        );
-      } finally {
-        if (isMounted) setIsLoadingStats(false);
-      }
-    }
-
-    async function loadRecent() {
-      setIsLoadingRecent(true);
-      setRecentError('');
-      try {
-        const res = await medicineService.getAll({
-          page: 1,
-          limit: 10,
-          sortBy: 'created_at',
-          order: 'desc',
-        });
-
-        if (!isMounted) return;
-        setRecentMedicines(res?.medicines ?? []);
-      } catch (err) {
-        if (!isMounted) return;
-        setRecentError(
-          err?.response?.data?.message || 'Failed to load recent medicines.',
-        );
-      } finally {
-        if (isMounted) setIsLoadingRecent(false);
-      }
-    }
-
-    loadStats();
-    loadRecent();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const cards = useMemo(
-    () => [
-      {
-        title: 'Total Medicines',
-        value: stats.totalMedicines,
-        icon: Pill,
-        accentClass: 'bg-teal-50 text-teal-600 ring-teal-100',
-        onClick: null,
-      },
-      {
-        title: 'Expired',
-        value: stats.expiredCount,
-        icon: Skull,
-        accentClass: 'bg-red-50 text-red-600 ring-red-100',
-        onClick: () => navigate('/alerts?section=expired'),
-      },
-      {
-        title: 'Critical',
-        value: stats.criticalCount,
-        icon: AlertCircle,
-        accentClass: 'bg-orange-50 text-orange-500 ring-orange-100',
-        onClick: () => navigate('/alerts?section=critical'),
-      },
-      {
-        title: 'Expiring Soon',
-        value: stats.expiringSoonCount,
-        icon: Clock,
-        accentClass: 'bg-yellow-50 text-yellow-500 ring-yellow-100',
-        onClick: () => navigate('/alerts?section=expiringSoon'),
-      },
-      {
-        title: 'Out of Stock',
-        value: stats.outOfStockCount,
-        icon: PackageX,
-        accentClass: 'bg-gray-100 text-gray-500 ring-gray-200',
-        onClick: () => navigate('/alerts?section=outOfStock'),
-      },
-      {
-        title: 'Running Low',
-        value: stats.runningLowCount,
-        icon: AlertTriangle,
-        accentClass: 'bg-amber-50 text-amber-500 ring-amber-100',
-        onClick: () => navigate('/alerts?section=runningLow'),
-      },
-    ],
-    [navigate, stats],
-  );
+  if (statsError) {
+    return (
+      <div className="rounded-xl bg-red-50 p-6 text-center text-red-600 ring-1 ring-red-100">
+        <p className="font-semibold">Error loading dashboard</p>
+        <p className="mt-1 text-sm">{statsError}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        {isLoadingStats ? (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:grid-cols-3">
+        {statsLoading ? (
           <StatCardsSkeleton />
         ) : (
           <>
-            {statsError ? (
-              <div className="mb-4 flex items-center gap-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                {statsError}
-              </div>
-            ) : null}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-              {cards.map((c) => (
-                <StatCard
-                  key={c.title}
-                  title={c.title}
-                  value={c.value}
-                  icon={c.icon}
-                  accentClass={c.accentClass}
-                  onClick={c.onClick ?? undefined}
-                />
-              ))}
-            </div>
+            <StatCard title="Total Inventory" value={stats.totalMedicines} color="teal" icon={Pill} onClick={() => navigate('/medicines')} />
+            <StatCard title="Expired Items" value={stats.expiredCount} color="red" icon={Skull} onClick={() => navigate('/alerts?section=expired')} />
+            <StatCard title="Critical Items" value={stats.criticalCount} color="orange" icon={AlertCircle} onClick={() => navigate('/alerts?section=critical')} />
+            <StatCard title="Expiring Soon" value={stats.expiringSoonCount} color="yellow" icon={Clock} onClick={() => navigate('/alerts?section=expiringSoon')} />
+            <StatCard title="Out of Stock" value={stats.outOfStockCount} color="red" icon={PackageX} onClick={() => navigate('/alerts?section=outOfStock')} />
+            <StatCard title="Running Low" value={stats.runningLowCount} color="amber" icon={AlertTriangle} onClick={() => navigate('/alerts?section=runningLow')} />
           </>
         )}
       </div>
 
-      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
-        <h2 className="mb-3 text-sm font-semibold text-slate-800">
-          Recent Medicines
-        </h2>
-
-        {recentError ? (
-          <div className="mb-3 flex items-center gap-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            {recentError}
-          </div>
-        ) : null}
-
+      <div className="rounded-2xl bg-white p-6 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100">
+        <h3 className="mb-6 text-lg font-bold text-slate-800">Recently Added</h3>
         <div className="overflow-x-auto">
-          <table className="min-w-full border-separate border-spacing-y-2">
-            <thead>
-              <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Quantity</th>
-                <th className="px-3 py-2">Expiry Date</th>
-                <th className="px-3 py-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoadingRecent ? (
-                <tr>
-                  <td colSpan={5} className="px-3 py-6">
-                    <Spinner />
-                  </td>
+          {recentLoading ? (
+            <Spinner className="py-12" />
+          ) : recentMedicines.medicines.length === 0 ? (
+            <p className="py-12 text-center text-slate-500">No medicines found</p>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <th className="pb-4 px-2">Medicine</th>
+                  <th className="pb-4 px-2">Category</th>
+                  <th className="pb-4 px-2">Stock</th>
+                  <th className="pb-4 px-2">Expiry</th>
+                  <th className="pb-4 px-2">Status</th>
                 </tr>
-              ) : recentMedicines.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-3 py-8 text-center text-sm text-slate-500"
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <Inbox className="h-8 w-8 text-slate-300" />
-                      <span>No medicines added yet</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                recentMedicines.map((m) => {
-                  const meta = BadgeFactory.create(m);
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {recentMedicines.medicines.slice(0, 5).map((m) => {
+                  const badge = BadgeFactory.create(m);
                   return (
-                    <tr key={m.id ?? `${m.name}-${m.expiry_date}`}>
-                      <td className="px-3 py-2 text-sm font-medium text-slate-800">
-                        {m.name}
-                      </td>
-                      <td className="px-3 py-2 text-sm text-slate-700">
-                        {m.category ?? '—'}
-                      </td>
-                      <td className="px-3 py-2 text-sm text-slate-700">
-                        {m.quantity ?? 0}
-                      </td>
-                      <td className="px-3 py-2 text-sm text-slate-700">
-                        {formatDate(m.expiry_date)}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Badge label={meta.label} color={meta.color} />
+                    <tr key={m.id} className="group hover:bg-slate-50/50 transition-colors">
+                      <td className="py-4 px-2 text-sm font-bold text-slate-800">{m.name}</td>
+                      <td className="py-4 px-2 text-sm text-slate-500 font-medium">{m.category}</td>
+                      <td className="py-4 px-2 text-sm text-slate-600 font-semibold">{m.quantity}</td>
+                      <td className="py-4 px-2 text-sm text-slate-500">{formatDate(m.expiry_date)}</td>
+                      <td className="py-4 px-2">
+                        <Badge label={badge.label} color={badge.color} />
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

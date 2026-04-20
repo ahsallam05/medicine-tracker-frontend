@@ -1,7 +1,8 @@
-/* eslint-disable react-refresh/only-export-components -- context + provider in one module */
-import { createContext, useCallback, useMemo, useState } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useCallback, useMemo, useState } from 'react';
+import { authService } from '../api';
 
-export const AuthContext = createContext(null);
+const AuthContext = createContext(null);
 
 function readStoredAuth() {
   try {
@@ -20,10 +21,13 @@ function readStoredAuth() {
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(() => readStoredAuth());
 
-  const login = useCallback((nextUser, nextToken) => {
-    setAuth({ user: nextUser, token: nextToken });
-    localStorage.setItem('token', nextToken);
-    localStorage.setItem('user', JSON.stringify(nextUser));
+  const login = useCallback(async (username, password) => {
+    const data = await authService.login(username, password);
+    const { user, token } = data;
+    setAuth({ user, token });
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    return data;
   }, []);
 
   const logout = useCallback(() => {
@@ -40,8 +44,16 @@ export function AuthProvider({ children }) {
       logout,
       isAuthenticated: Boolean(auth.token && auth.user),
     }),
-    [auth.user, auth.token, login, logout],
+    [auth.user, auth.token, login, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return ctx;
 }

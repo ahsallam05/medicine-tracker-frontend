@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../../auth';
 
 function normalizeRole(role) {
   return typeof role === 'string' ? role.toLowerCase() : '';
