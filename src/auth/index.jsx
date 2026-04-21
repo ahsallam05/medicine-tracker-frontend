@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useCallback, useMemo, useState } from 'react';
+import { createContext, useContext, useCallback, useMemo, useState, useEffect } from 'react';
 import { authService } from '../api';
 
 const AuthContext = createContext(null);
@@ -22,12 +22,17 @@ export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(() => readStoredAuth());
 
   const login = useCallback(async (username, password) => {
-    const data = await authService.login(username, password);
-    const { user, token } = data;
+    const res = await authService.login(username, password);
+    const user = res?.user || res?.data?.user;
+    const token = res?.token || res?.data?.token;
+
+    if (!user || !token) {
+      throw new Error('Invalid response from server');
+    }
     setAuth({ user, token });
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
-    return data;
+    return { user, token };
   }, []);
 
   const logout = useCallback(() => {
@@ -35,6 +40,13 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   }, []);
+
+  // Handle global 401 events from Axios
+  useEffect(() => {
+    const handleUnauthorized = () => logout();
+    window.addEventListener('auth-unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth-unauthorized', handleUnauthorized);
+  }, [logout]);
 
   const value = useMemo(
     () => ({
