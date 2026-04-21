@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react';
 import { Eye, EyeOff, Loader2, X } from 'lucide-react';
 import { adminService } from '../../api';
 
+function parseServerError(err, action) {
+  const data = err?.response?.data;
+  if (data?.errors || data?.details) {
+    return Object.values(data.errors ?? data.details).join(', ');
+  }
+  return data?.message || data?.error || `Failed to ${action} pharmacist.`;
+}
+
 function getInitialForm(pharmacist) {
   if (pharmacist) {
     return {
@@ -60,19 +68,7 @@ export default function PharmacistModal({ isOpen, onClose, pharmacist, onSaved }
       onSaved?.();
       onClose();
     } catch (err) {
-      console.error('Pharmacist Save Error:', err.response?.data);
-      const serverData = err?.response?.data;
-      const serverMessage = serverData?.message || serverData?.error;
-      const serverErrors = serverData?.errors || serverData?.details;
-
-      if (serverErrors && typeof serverErrors === 'object') {
-        const detail = Object.values(serverErrors).join(', ');
-        setError(detail || serverMessage || 'Validation failed.');
-      } else if (serverMessage) {
-        setError(serverMessage);
-      } else {
-        setError(`Failed to ${isEdit ? 'update' : 'create'} pharmacist.`);
-      }
+      setError(parseServerError(err, isEdit ? 'update' : 'create'));
     } finally {
       setIsSubmitting(false);
     }
