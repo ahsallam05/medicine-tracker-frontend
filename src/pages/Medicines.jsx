@@ -133,6 +133,7 @@ export default function Medicines() {
 
       {modalMedicine !== undefined ? (
         <MedicineModal
+          key={modalMedicine?.id || 'new'}
           isOpen onClose={() => setModalMedicine(undefined)}
           medicine={modalMedicine ?? null}
           onSaved={async () => { setError(''); await fetchMedicines(page, search); }}

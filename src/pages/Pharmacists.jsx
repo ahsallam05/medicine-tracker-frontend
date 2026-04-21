@@ -12,7 +12,13 @@ export default function Pharmacists() {
 
   const {
     data: pharmacists, isLoading, error, setError, execute: fetchPharmacists,
-  } = useApi(adminService.getAll, { immediate: true, initialData: [] });
+  } = useApi(adminService.getAll, { 
+    immediate: true, 
+    initialData: [],
+    transform: (data) => [...(data || [])].sort((a, b) => 
+      new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0)
+    )
+  });
 
   const handleToggleStatus = async (pharmacist) => {
     try {
@@ -100,6 +106,7 @@ export default function Pharmacists() {
 
       {modalPharmacist !== undefined && (
         <PharmacistModal
+          key={modalPharmacist?.id || 'new'}
           isOpen onClose={() => setModalPharmacist(undefined)}
           pharmacist={modalPharmacist ?? null}
           onSaved={async () => { setError(''); await fetchPharmacists(); }}

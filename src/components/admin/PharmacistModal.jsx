@@ -60,7 +60,19 @@ export default function PharmacistModal({ isOpen, onClose, pharmacist, onSaved }
       onSaved?.();
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || `Failed to ${isEdit ? 'update' : 'create'} pharmacist.`);
+      console.error('Pharmacist Save Error:', err.response?.data);
+      const serverData = err?.response?.data;
+      const serverMessage = serverData?.message || serverData?.error;
+      const serverErrors = serverData?.errors || serverData?.details;
+
+      if (serverErrors && typeof serverErrors === 'object') {
+        const detail = Object.values(serverErrors).join(', ');
+        setError(detail || serverMessage || 'Validation failed.');
+      } else if (serverMessage) {
+        setError(serverMessage);
+      } else {
+        setError(`Failed to ${isEdit ? 'update' : 'create'} pharmacist.`);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -70,9 +82,9 @@ export default function PharmacistModal({ isOpen, onClose, pharmacist, onSaved }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
-      <div 
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" 
-        onClick={!isSubmitting ? onClose : undefined} 
+      <div
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300"
+        onClick={!isSubmitting ? onClose : undefined}
       />
       <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl animate-in zoom-in-95 duration-300 ring-1 ring-slate-200">
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
