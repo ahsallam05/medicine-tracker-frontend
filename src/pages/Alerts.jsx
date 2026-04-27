@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertCircle, Clock, PackageX, Skull, AlertTriangle } from 'lucide-react';
 import { alertService } from '../api';
-import { AlertSection, Spinner } from '../components/shared';
+import { Spinner } from '../components/ui';
+import { AlertSection } from '../components/alerts';
 import { useApi } from '../hooks';
 
 const SECTIONS = [

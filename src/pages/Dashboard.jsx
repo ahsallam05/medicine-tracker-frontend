@@ -1,9 +1,24 @@
 import { useNavigate } from 'react-router-dom';
 import { Pill, Skull, AlertCircle, Clock, PackageX, AlertTriangle } from 'lucide-react';
 import { dashboardService, medicineService } from '../api';
-import { Badge, Spinner, StatCard, StatCardsSkeleton } from '../components/shared';
+import { Badge, Spinner, StatCard, StatCardsSkeleton, DataTable } from '../components/ui';
 import { useApi } from '../hooks';
 import { BadgeFactory, formatDate } from '../utils';
+import { RECENTLY_ADDED_LIMIT } from '../constants';
+
+const columns = [
+  { key: 'name', label: 'Medicine', className: 'font-bold text-slate-800' },
+  { key: 'category', label: 'Category', className: 'text-slate-500 font-medium' },
+  { key: 'quantity', label: 'Stock', className: 'font-semibold text-slate-700' },
+  { key: 'expiry_date', label: 'Expiry', render: (row) => formatDate(row.expiry_date) },
+  { 
+    key: 'status', label: 'Status', 
+    render: (row) => {
+      const badge = BadgeFactory.create(row);
+      return <Badge label={badge.label} color={badge.color} />;
+    }
+  },
+];
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -23,7 +38,7 @@ export default function Dashboard() {
   const {
     data: recentMedicines,
     isLoading: recentLoading,
-  } = useApi(medicineService.getAll, {
+  } = useApi(() => medicineService.getAll({ limit: RECENTLY_ADDED_LIMIT, sortBy: 'created_at', order: 'desc' }), {
     immediate: true,
     initialData: { medicines: [] },
   });
@@ -57,39 +72,10 @@ export default function Dashboard() {
       <div className="rounded-2xl bg-white p-6 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100">
         <h3 className="mb-6 text-lg font-bold text-slate-800">Recently Added</h3>
         <div className="overflow-x-auto">
-          {recentLoading ? (
-            <Spinner className="py-12" />
-          ) : recentMedicines.medicines.length === 0 ? (
-            <p className="py-12 text-center text-slate-500">No medicines found</p>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase tracking-wider text-slate-400">
-                  <th className="pb-4 px-2">Medicine</th>
-                  <th className="pb-4 px-2">Category</th>
-                  <th className="pb-4 px-2">Stock</th>
-                  <th className="pb-4 px-2">Expiry</th>
-                  <th className="pb-4 px-2">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {recentMedicines.medicines.slice(0, 5).map((m) => {
-                  const badge = BadgeFactory.create(m);
-                  return (
-                    <tr key={m.id} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 px-2 text-sm font-bold text-slate-800">{m.name}</td>
-                      <td className="py-4 px-2 text-sm text-slate-500 font-medium">{m.category}</td>
-                      <td className="py-4 px-2 text-sm text-slate-600 font-semibold">{m.quantity}</td>
-                      <td className="py-4 px-2 text-sm text-slate-500">{formatDate(m.expiry_date)}</td>
-                      <td className="py-4 px-2">
-                        <Badge label={badge.label} color={badge.color} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+          <DataTable
+            columns={columns} data={recentMedicines.medicines} isLoading={recentLoading}
+            emptyMessage="No medicines found" emptyIcon={Pill} rowKey="id"
+          />
         </div>
       </div>
     </div>

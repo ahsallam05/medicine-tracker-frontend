@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Pencil, Trash2, Power, PowerOff, AlertCircle, Users } from 'lucide-react';
 import { adminService } from '../api';
 import { PharmacistModal } from '../components/admin';
-import { ConfirmDialog, DataTable } from '../components/shared';
+import { ConfirmDialog, DataTable } from '../components/ui';
 import { useApi } from '../hooks';
 
 export default function Pharmacists() {
@@ -116,7 +116,7 @@ export default function Pharmacists() {
       <ConfirmDialog
         isOpen={Boolean(deleteTarget)} title="Delete Pharmacist"
         message={deleteTarget ? `Are you sure you want to delete "${deleteTarget.name}"?` : ''}
-        confirmText="Delete" isLoading={isDeleting} onConfirm={handleDeleteConfirm}
+        confirmText="Delete" loadingText="Deleting..." isLoading={isDeleting} onConfirm={handleDeleteConfirm}
         onCancel={() => (isDeleting ? null : setDeleteTarget(null))}
       />
     </div>

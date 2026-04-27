@@ -1,12 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pencil, Plus, Trash2, AlertCircle, Pill } from 'lucide-react';
 import { medicineService } from '../api';
-import { Badge, ConfirmDialog, DataTable, Pagination } from '../components/shared';
+import { Badge, ConfirmDialog, DataTable, Pagination } from '../components/ui';
 import { MedicineModal, MedicineFilters } from '../components/medicines';
 import { useFilters, useApi } from '../hooks';
 import { BadgeFactory, formatDate } from '../utils';
+import { MEDICINES_PER_PAGE } from '../constants';
 
-const LIMIT = 20;
+const columns = [
+  { key: 'name', label: 'Name', className: 'font-bold text-slate-800' },
+  { key: 'category', label: 'Category', className: 'text-slate-500 font-medium' },
+  { key: 'quantity', label: 'Quantity', className: 'font-semibold text-slate-700' },
+  { key: 'expiry_date', label: 'Expiry Date', render: (row) => formatDate(row.expiry_date) },
+  { 
+    key: 'status', label: 'Status', 
+    render: (row) => {
+      const badge = BadgeFactory.create(row);
+      return <Badge label={badge.label} color={badge.color} />;
+    }
+  },
+];
 
 export default function Medicines() {
   const [search, setSearch] = useState('');
@@ -18,7 +31,7 @@ export default function Medicines() {
   const [modalMedicine, setModalMedicine] = useState(undefined);
 
   const fetchMedicinesFn = useCallback(async (p, s) => {
-    const params = { page: p, limit: LIMIT, ...getApiParams() };
+    const params = { page: p, limit: MEDICINES_PER_PAGE, sortBy: 'created_at', order: 'desc', ...getApiParams() };
     if (s?.trim()) params.search = s.trim();
     return medicineService.getAll(params);
   }, [getApiParams]);
@@ -31,7 +44,7 @@ export default function Medicines() {
 
   useEffect(() => {
     fetchMedicines(page, search);
-  }, [fetchMedicines, fetchMedicinesFn, page, search]);
+  }, [page, search, getApiParams, fetchMedicines]);
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -47,18 +60,8 @@ export default function Medicines() {
     }
   };
 
-  const columns = [
-    { key: 'name', label: 'Name', className: 'font-bold text-slate-800' },
-    { key: 'category', label: 'Category', className: 'text-slate-500 font-medium' },
-    { key: 'quantity', label: 'Quantity', className: 'font-semibold text-slate-700' },
-    { key: 'expiry_date', label: 'Expiry Date', render: (row) => formatDate(row.expiry_date) },
-    { 
-      key: 'status', label: 'Status', 
-      render: (row) => {
-        const badge = BadgeFactory.create(row);
-        return <Badge label={badge.label} color={badge.color} />;
-      }
-    },
+  const columnsWithActions = [
+    ...columns,
     {
       key: 'actions', label: 'Actions', className: 'text-right',
       render: (row) => (
@@ -114,7 +117,7 @@ export default function Medicines() {
 
       <div className="rounded-2xl bg-white p-6 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100">
         <DataTable
-          columns={columns} data={listData.medicines} isLoading={isLoading}
+          columns={columnsWithActions} data={listData.medicines} isLoading={isLoading}
           emptyMessage="No medicines found in inventory" emptyIcon={Pill} rowKey="id"
         />
         <Pagination
@@ -127,7 +130,7 @@ export default function Medicines() {
       <ConfirmDialog
         isOpen={Boolean(deleteTarget)} title="Delete Medicine"
         message={deleteTarget ? `Are you sure you want to delete "${deleteTarget.name}"?` : ''}
-        confirmText="Delete" isLoading={isDeleting} onConfirm={handleDeleteConfirm}
+        confirmText="Delete" loadingText="Deleting..." isLoading={isDeleting} onConfirm={handleDeleteConfirm}
         onCancel={() => (isDeleting ? null : setDeleteTarget(null))}
       />
 

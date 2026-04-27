@@ -1,2 +1,2 @@
-export { default as apiClient } from './client';
+export { default as apiClient } from './axios';
 export * from './services';

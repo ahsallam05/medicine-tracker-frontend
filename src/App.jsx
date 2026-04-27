@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Medicines from './pages/Medicines';
 import Alerts from './pages/Alerts';
 import Pharmacists from './pages/Pharmacists';
+import Forbidden from './pages/Forbidden';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/403" element={<Forbidden />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route index element={<Dashboard />} />

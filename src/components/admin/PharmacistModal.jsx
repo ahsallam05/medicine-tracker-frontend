@@ -2,13 +2,7 @@ import { useEffect, useState } from 'react';
 import { Eye, EyeOff, Loader2, X } from 'lucide-react';
 import { adminService } from '../../api';
 
-function parseServerError(err, action) {
-  const data = err?.response?.data;
-  if (data?.errors || data?.details) {
-    return Object.values(data.errors ?? data.details).join(', ');
-  }
-  return data?.message || data?.error || `Failed to ${action} pharmacist.`;
-}
+import { parseApiError } from '../../utils';
 
 function getInitialForm(pharmacist) {
   if (pharmacist) {
@@ -26,10 +20,7 @@ function getInitialForm(pharmacist) {
 }
 
 export default function PharmacistModal({ isOpen, onClose, pharmacist, onSaved }) {
-  const initial = getInitialForm(pharmacist);
-  const [name, setName] = useState(initial.name);
-  const [username, setUsername] = useState(initial.username);
-  const [password, setPassword] = useState(initial.password);
+  const [form, setForm] = useState(() => getInitialForm(pharmacist));
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -52,13 +43,13 @@ export default function PharmacistModal({ isOpen, onClose, pharmacist, onSaved }
     setIsSubmitting(true);
 
     try {
-      const data = { name, username };
-      if (password) data.password = password;
+      const data = { name: form.name, username: form.username };
+      if (form.password) data.password = form.password;
 
       if (isEdit) {
         await adminService.update(pharmacist.id, data);
       } else {
-        if (!password) {
+        if (!form.password) {
           setError('Password is required for registration.');
           setIsSubmitting(false);
           return;
@@ -68,7 +59,7 @@ export default function PharmacistModal({ isOpen, onClose, pharmacist, onSaved }
       onSaved?.();
       onClose();
     } catch (err) {
-      setError(parseServerError(err, isEdit ? 'update' : 'create'));
+      setError(parseApiError(err, `Failed to ${isEdit ? 'update' : 'create'} pharmacist.`));
     } finally {
       setIsSubmitting(false);
     }
@@ -106,8 +97,8 @@ export default function PharmacistModal({ isOpen, onClose, pharmacist, onSaved }
             <input
               type="text"
               required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={form.name}
+              onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
               disabled={isSubmitting}
               className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-50"
               placeholder="e.g. John Doe"
@@ -119,8 +110,8 @@ export default function PharmacistModal({ isOpen, onClose, pharmacist, onSaved }
             <input
               type="text"
               required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={form.username}
+              onChange={(e) => setForm(f => ({ ...f, username: e.target.value }))}
               disabled={isSubmitting}
               className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-50"
               placeholder="e.g. john.doe"
@@ -135,8 +126,8 @@ export default function PharmacistModal({ isOpen, onClose, pharmacist, onSaved }
               <input
                 type={showPassword ? 'text' : 'password'}
                 required={!isEdit}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={form.password}
+                onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))}
                 disabled={isSubmitting}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 pr-11 text-sm text-slate-900 outline-none transition-all focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-50"
                 placeholder="••••••••"

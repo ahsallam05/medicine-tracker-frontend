@@ -21,7 +21,9 @@ export default function Login() {
     setIsLoading(true);
     try {
       await login(username, password);
-      navigate('/', { replace: true });
+      // We removed the manual navigate() call here.
+      // The component will automatically redirect because of the 
+      // 'if (isAuthenticated)' check at the top once the state updates.
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed.');
     } finally {

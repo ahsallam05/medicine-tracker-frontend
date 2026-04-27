@@ -1,26 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 import { medicineService } from '../../api';
-import { toInputDate } from '../../utils';
+import { toInputDate, parseApiError } from '../../utils';
+import { DEFAULT_CATEGORY, MEDICINE_CATEGORIES } from '../../constants';
 
 function getInitialForm(medicine) {
   if (medicine) {
     return {
       name: medicine.name ?? '',
-      category: medicine.category ?? 'Antipyretics',
+      category: medicine.category ?? DEFAULT_CATEGORY,
       quantity: medicine.quantity ?? 0,
       expiry_date: toInputDate(medicine.expiry_date),
     };
   }
-  return { name: '', category: 'Antipyretics', quantity: 0, expiry_date: '' };
+  return { name: '', category: DEFAULT_CATEGORY, quantity: 0, expiry_date: '' };
 }
 
 export default function MedicineModal({ isOpen, onClose, medicine, onSaved }) {
-  const initial = getInitialForm(medicine);
-  const [name, setName] = useState(initial.name);
-  const [category, setCategory] = useState(initial.category);
-  const [quantity, setQuantity] = useState(initial.quantity);
-  const [expiryDate, setExpiryDate] = useState(initial.expiry_date);
+  const [form, setForm] = useState(() => getInitialForm(medicine));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -39,13 +36,13 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSaved }) {
     setError('');
     setIsSubmitting(true);
     try {
-      const data = { name, category, quantity: Number(quantity), expiry_date: expiryDate };
+      const data = { ...form, quantity: Number(form.quantity) };
       if (isEdit) await medicineService.update(medicine.id, data);
       else await medicineService.create(data);
       onSaved?.();
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to save.');
+      setError(parseApiError(err, 'Failed to save.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -69,7 +66,7 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSaved }) {
             <div>
               <label className="mb-1.5 block text-sm font-bold text-slate-700">Medicine Name</label>
               <input
-                type="text" required value={name} onChange={(e) => setName(e.target.value)} disabled={isSubmitting}
+                type="text" required value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} disabled={isSubmitting}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-50"
                 placeholder="e.g. Paracetamol"
               />
@@ -77,24 +74,24 @@ export default function MedicineModal({ isOpen, onClose, medicine, onSaved }) {
             <div>
               <label className="mb-1.5 block text-sm font-bold text-slate-700">Category</label>
               <select
-                value={category} onChange={(e) => setCategory(e.target.value)} disabled={isSubmitting}
+                value={form.category} onChange={(e) => setForm(f => ({ ...f, category: e.target.value }))} disabled={isSubmitting}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-teal-500 focus:bg-white"
               >
-                {medicineService.CATEGORIES.filter(c => c !== 'All').map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                {MEDICINE_CATEGORIES.filter(c => c !== 'All').map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="mb-1.5 block text-sm font-bold text-slate-700">Quantity</label>
                 <input
-                  type="number" min="0" required value={quantity} onChange={(e) => setQuantity(e.target.value)} disabled={isSubmitting}
+                  type="number" min="0" required value={form.quantity} onChange={(e) => setForm(f => ({ ...f, quantity: e.target.value }))} disabled={isSubmitting}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-teal-500 focus:bg-white"
                 />
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-bold text-slate-700">Expiry Date</label>
                 <input
-                  type="date" required value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} disabled={isSubmitting}
+                  type="date" required value={form.expiry_date} onChange={(e) => setForm(f => ({ ...f, expiry_date: e.target.value }))} disabled={isSubmitting}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-teal-500 focus:bg-white"
                 />
               </div>

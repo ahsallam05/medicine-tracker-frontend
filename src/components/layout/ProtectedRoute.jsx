@@ -16,7 +16,7 @@ export default function ProtectedRoute({ allowedRoles }) {
     const role = normalizeRole(user?.role);
     const allowed = allowedRoles.map((r) => normalizeRole(r));
     if (!allowed.includes(role)) {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to="/" replace />;
     }
   }
 
