@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { Eye, EyeOff, Loader2, Stethoscope } from 'lucide-react';
 
@@ -11,7 +11,6 @@ export default function Login() {
   const [error, setError] = useState('');
 
   const { login, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
 
   if (isAuthenticated) return <Navigate to="/" replace />;
 

@@ -7,7 +7,7 @@ class AuthService {
     
     // Fallback if backend returns stringified JSON without application/json header
     if (typeof data === 'string') {
-      try { data = JSON.parse(data); } catch (e) { /* ignore */ }
+      try { data = JSON.parse(data); } catch { /* ignore */ }
     }
 
     // Deep search for user and token
