@@ -36,15 +36,7 @@ npm install
 
 Create a `.env` file in the root directory to configure the API endpoint.
 
-#### Option 1: Use Production API (Recommended for quick start)
-
-No backend setup required. Use the deployed production API:
-
-```env
-VITE_API_URL=https://medicine-tracker-backend.up.railway.app/api
-```
-
-#### Option 2: Use Local Backend
+#### Use Local Backend
 
 To run with a local backend, you need to set up the backend first:
 
